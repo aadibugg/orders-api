@@ -21,17 +21,6 @@ from pydantic import BaseModel
 app = FastAPI(title="Orders API")
 
 # ---------------------------------------------------------------------------
-# CORS — required so the grader's browser page can call this API directly.
-# ---------------------------------------------------------------------------
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# ---------------------------------------------------------------------------
 # Assigned configuration
 # ---------------------------------------------------------------------------
 TOTAL_ORDERS = 50
@@ -97,6 +86,27 @@ async def rate_limit_middleware(request: Request, call_next):
                 headers=exc.headers,
             )
     return await call_next(request)
+
+
+# ---------------------------------------------------------------------------
+# CORS — registered AFTER the rate-limit middleware on purpose.
+#
+# FastAPI/Starlette builds its middleware stack so that whichever middleware
+# is added LAST ends up OUTERMOST (wrapping everything else). We need CORS
+# to be outermost so that even a 429 response returned early by the rate
+# limiter (which never calls call_next) still passes through CORSMiddleware
+# and gets an Access-Control-Allow-Origin header. If CORS were registered
+# first (and therefore ended up innermost), short-circuited 429 responses
+# would skip it entirely, and a browser's fetch() would fail with a generic
+# "Failed to fetch" / CORS error instead of showing the 429.
+# ---------------------------------------------------------------------------
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 # ---------------------------------------------------------------------------
