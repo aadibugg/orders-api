@@ -106,6 +106,12 @@ app.add_middleware(
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
+    # By default browsers only let JS read a small safelist of response
+    # headers on cross-origin requests (Content-Type, Content-Length, etc).
+    # Retry-After is NOT on that safelist, so without explicitly exposing
+    # it here, fetch()'s response.headers.get("Retry-After") returns null
+    # in a browser even though the header is genuinely present on the wire.
+    expose_headers=["Retry-After"],
 )
 
 
